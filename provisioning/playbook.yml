@@ -1,0 +1,78 @@
+- hosts: mngsrv
+  remote_user: vagrant
+  become: yes
+  tasks:
+    - name: Update packages
+      yum: name=* state=latest
+
+    - name: Run the Docker installation script
+      shell: /bin/curl -fsSL https://get.docker.com/ | sh
+
+    - name: Start the Docker daemon
+      command: /sbin/service docker start
+
+    - name: Add "vagrant" to "docker" group
+      command: /sbin/usermod -aG docker vagrant
+
+    - name: Ensure Docker starts when system booting
+      command: /sbin/chkconfig docker on
+
+    - name: Run redmine simply
+      command: /bin/docker run -d -p 3000:3000 --name some-redmine redmine
+
+- hosts: dbgsrv
+  remote_user: vagrant
+  become: yes
+  tasks:
+    - name: Upate packages
+      apt: upgrade=dist
+
+    - name: Install build-essential package
+      apt: name=build-essential state=latest
+
+- hosts: devsrv
+  remote_user: vagrant
+  become: yes
+  tasks:
+    - name: Upate packages
+      apt: upgrade=dist
+
+    - name: Download Go compiler binary
+      command: /usr/bin/wget https://storage.googleapis.com/golang/go1.4.linux-amd64.tar.gz
+
+    - name: Extract Go compiler
+      command: /bin/tar zxvf go1.4.linux-amd64.tar.gz
+
+    - name: Rename folder name
+      command: /bin/mv ./go ./go1.4
+
+    - name: Install Git
+      apt: name=git state=latest
+
+    - name: Create a working directory
+      command: /bin/mkdir work
+
+    - name: Change directory
+      command: cd ~/work
+
+    - name: Fetch Go lang repository
+      command: /usr/bin/git clone https://go.googlesource.com/go
+
+    - name: Change directory
+      command: cd src
+
+    - name: Build Go binary
+      command: ./all.bash
+
+    - name: Change directory
+      command: cd ~/work
+
+    - name: Create basic directories
+      command: /bin/mkdir -p code/{bin,src,pkg}
+
+    - name: Set environment variable [GOPATH]
+      command: export GOPATH=$HOME/work/code
+
+    - name: Add $GOPATH/bin to PATH
+      command: export PATH=$PATH:$GOPATH/bin
+
