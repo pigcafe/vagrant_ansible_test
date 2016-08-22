@@ -2,9 +2,6 @@
   remote_user: vagrant
   become: yes
   tasks:
-    - name: Update packages
-      yum: name=* state=latest
-
     - name: Run the Docker installation script
       shell: /bin/curl -fsSL https://get.docker.com/ | sh
 
@@ -32,10 +29,10 @@
 
 - hosts: devsrv
   remote_user: vagrant
-  become: yes
   tasks:
     - name: Upate packages
       apt: upgrade=dist
+      become: yes
 
     - name: Download Go compiler binary
       command: /usr/bin/wget https://storage.googleapis.com/golang/go1.4.linux-amd64.tar.gz
@@ -48,31 +45,23 @@
 
     - name: Install Git
       apt: name=git state=latest
+      become: yes
 
     - name: Create a working directory
-      command: /bin/mkdir work
-
-    - name: Change directory
-      command: cd ~/work
+      file: path=/home/vagrant/work state=directory
 
     - name: Fetch Go lang repository
-      command: /usr/bin/git clone https://go.googlesource.com/go
-
-    - name: Change directory
-      command: cd src
+      command: /usr/bin/git clone https://go.googlesource.com/go chdir=/home/vagrant/work/
 
     - name: Build Go binary
-      command: ./all.bash
+      command: ./all.bash chdir=work/go/src/
 
-    - name: Change directory
-      command: cd ~/work
-
-    - name: Create basic directories
-      command: /bin/mkdir -p code/{bin,src,pkg}
-
-    - name: Set environment variable [GOPATH]
-      command: export GOPATH=$HOME/work/code
+    - name: Set environment variable [GOROOT]
+      shell: echo "export GOROOT=$HOME/work/go" >> ~/.bashrc
 
     - name: Add $GOPATH/bin to PATH
-      command: export PATH=$PATH:$GOPATH/bin
+      shell: echo "export PATH=$PATH:$GOROOT/bin" >> ~/.bashrc
+
+    - name: Reflect $GOPATH
+      shell: source ~/.bashrc executable=/bin/bash
 
